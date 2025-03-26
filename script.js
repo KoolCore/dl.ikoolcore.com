@@ -1,5 +1,22 @@
 "use strict";
 const search = RegExp("[?&]q=([^&]+)");
+
+// 设置网站favicon
+function setFavicon() {
+    // 移除所有现有的favicon
+    const existingIcons = document.querySelectorAll('link[rel*="icon"]');
+    for (let i = 0; i < existingIcons.length; i++) {
+        existingIcons[i].parentNode.removeChild(existingIcons[i]);
+    }
+    
+    // 添加我们自己的favicon
+    const link = document.createElement('link');
+    link.rel = 'shortcut icon';
+    link.href = '/favicon.png';
+    link.type = 'image/png';
+    document.head.appendChild(link);
+}
+
 function setPath(crumbs, files, q, path, query) {
 	if (document.location.pathname != path || document.location.search != query) {
 		history.pushState({}, document.title, path + query);
@@ -9,14 +26,21 @@ function setPath(crumbs, files, q, path, query) {
 	document.body.classList.add("loading");
 	window.scrollTo(0, 0);
 
+	function hasChineseCharacters(str) {
+        return /[\u4E00-\u9FFF]/.test(str);
+    }
+
 	function a(sp, href, text, cls, rel) {
 		let r = document.createElement("a");
 		let textSpan = document.createElement("span");
-		textSpan.appendChild(document.createTextNode(text === document.location.hostname ? "Home" : text.replace(/_/g, " ")));
+		textSpan.appendChild(document.createTextNode(text === document.location.hostname ? "HOME" : text.replace(/_/g, " ")));
 		r.appendChild(textSpan);
 		r.setAttribute("href", href);
 		if (rel) r.setAttribute("rel", rel);
 		if (cls) r.classList.add(cls);
+		if (hasChineseCharacters(text)) {
+			r.setAttribute("lang", "zh-CN");
+		}
 		if (sp)	r.addEventListener("click", function(e){
 			e.preventDefault();
 			setPath(crumbs, files, q, href, "");
@@ -95,10 +119,16 @@ function onLoad() {
 	const files  = document.getElementById("files");
 	const search = document.getElementById("search");
 	const q      = document.getElementById("q");
+	
+	// 初始设置favicon
+	setFavicon();
+	
 	setPath(path, files, q, document.location.pathname, document.location.search);
 
 	window.addEventListener("popstate", function(e) {
 		setPath(path, files, q, document.location.pathname, document.location.search);
+		// 页面历史变化时重新设置favicon
+		setFavicon();
 	});
 
 	search.addEventListener("submit", function(e) {
@@ -106,6 +136,37 @@ function onLoad() {
 		const s = q.value ? "?r=1&q=" + encodeURIComponent(q.value) : "";
 		setPath(path, files, q, document.location.pathname, s);
 	});
+	
+	// 监听所有链接点击，特别是PDF链接
+	document.addEventListener('click', function(e) {
+		// 找到最近的a标签
+		const link = e.target.closest('a');
+		if (link) {
+			// 对于所有链接，特别是PDF链接，确保favicon保持不变
+			setTimeout(setFavicon, 100);  // 短延迟确保在页面变化后执行
+			
+			// 对于PDF链接，设置定期检查以确保favicon不变
+			if (link.href && link.href.toLowerCase().endsWith('.pdf')) {
+				// 设置一个间隔，持续确保favicon正确
+				const faviconInterval = setInterval(setFavicon, 500);
+				
+				// 30秒后停止检查
+				setTimeout(function() {
+					clearInterval(faviconInterval);
+				}, 30000);
+			}
+		}
+	});
+	
+	// 监听visibilitychange事件，当用户从其他标签页返回时重新设置favicon
+	document.addEventListener('visibilitychange', function() {
+		if (document.visibilityState === 'visible') {
+			setFavicon();
+		}
+	});
+	
+	// 定期检查favicon（以防其他脚本或浏览器行为改变它）
+	setInterval(setFavicon, 5000);
 }
 if (document.readyState === "loading")
 	document.addEventListener("DOMContentLoaded", onLoad);
