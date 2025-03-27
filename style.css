@@ -250,9 +250,15 @@ header {
 }
 
 #files li a span {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	display: inline-block;
+}
+
+#files li a span:lang(zh) {
+	font-family: 'Noto Sans SC', sans-serif;
+}
+
+#files li a span:lang(en) {
+	font-family: 'Montserrat', sans-serif;
 }
 
 #files li a[lang="zh-CN"] {
@@ -588,6 +594,7 @@ header {
 	z-index: -1;
 	overflow: hidden;
 	background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+	pointer-events: none; /* Prevent interaction with background */
 }
 
 .tech-grid {
@@ -601,6 +608,7 @@ header {
 		linear-gradient(90deg, rgba(37, 99, 235, 0.03) 1px, transparent 1px);
 	background-size: 50px 50px;
 	animation: grid-move 25s linear infinite;
+	pointer-events: none; /* Prevent interaction with grid */
 }
 
 .tech-grid:before {
@@ -613,6 +621,7 @@ header {
 		rgba(37, 99, 235, 0.05) 25%,
 		transparent 70%);
 	animation: pulse 8s ease-in-out infinite;
+	pointer-events: none; /* Prevent interaction with pulse effect */
 }
 
 @keyframes grid-move {

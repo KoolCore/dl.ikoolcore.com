@@ -30,21 +30,62 @@ function setPath(crumbs, files, q, path, query) {
         return /[\u4E00-\u9FFF]/.test(str);
     }
 
+	function processTextWithMixedLanguages(text) {
+		// Replace underscores with spaces first
+		text = text === document.location.hostname ? "HOME" : text.replace(/_/g, " ");
+		
+		// If no Chinese characters, return as is with English language tag
+		if (!hasChineseCharacters(text)) {
+			let span = document.createElement("span");
+			span.setAttribute("lang", "en");
+			span.textContent = text;
+			return span;
+		}
+		
+		// If it has Chinese characters, process character by character
+		const fragment = document.createDocumentFragment();
+		let currentType = null;
+		let currentSpan = null;
+		
+		for (let i = 0; i < text.length; i++) {
+			const char = text[i];
+			const isChinese = /[\u4E00-\u9FFF]/.test(char);
+			const type = isChinese ? "zh" : "en";
+			
+			// If type changed or first character, create a new span
+			if (type !== currentType) {
+				currentType = type;
+				currentSpan = document.createElement("span");
+				currentSpan.setAttribute("lang", type);
+				fragment.appendChild(currentSpan);
+			}
+			
+			currentSpan.textContent += char;
+		}
+		
+		return fragment;
+	}
+
 	function a(sp, href, text, cls, rel) {
 		let r = document.createElement("a");
-		let textSpan = document.createElement("span");
-		textSpan.appendChild(document.createTextNode(text === document.location.hostname ? "HOME" : text.replace(/_/g, " ")));
-		r.appendChild(textSpan);
+		
+		// Process text with mixed languages
+		const textContent = processTextWithMixedLanguages(text);
+		r.appendChild(textContent);
+		
 		r.setAttribute("href", href);
 		if (rel) r.setAttribute("rel", rel);
 		if (cls) r.classList.add(cls);
+		
+		// We still keep this for backward compatibility
 		if (hasChineseCharacters(text)) {
 			r.setAttribute("lang", "zh-CN");
 		}
+		
 		if (sp)	r.addEventListener("click", function(e){
 			e.preventDefault();
 			setPath(crumbs, files, q, href, "");
-			});
+		});
 		return r;
 	}
 	function el(e, c) {
