@@ -160,9 +160,13 @@ function onLoad() {
 	const files  = document.getElementById("files");
 	const search = document.getElementById("search");
 	const q      = document.getElementById("q");
+	const pullToRefresh = document.getElementById("pull-to-refresh");
 	
 	// 初始设置favicon
 	setFavicon();
+	
+	// 初始化下拉刷新功能
+	initPullToRefresh();
 	
 	setPath(path, files, q, document.location.pathname, document.location.search);
 
@@ -199,16 +203,92 @@ function onLoad() {
 		}
 	});
 	
-	// 监听visibilitychange事件，当用户从其他标签页返回时重新设置favicon
-	document.addEventListener('visibilitychange', function() {
-		if (document.visibilityState === 'visible') {
-			setFavicon();
+	// 初始化下拉刷新功能
+	function initPullToRefresh() {
+		// 检测是否为移动设备
+		const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+		if (!isMobile) return;
+		
+		let touchStartY = 0;
+		let touchEndY = 0;
+		const threshold = 80; // 触发刷新的阈值
+		let refreshing = false;
+		
+		// 处理触摸开始事件
+		document.addEventListener('touchstart', function(e) {
+			touchStartY = e.touches[0].clientY;
+		}, { passive: true });
+		
+		// 处理触摸移动事件
+		document.addEventListener('touchmove', function(e) {
+			if (refreshing) return;
+			
+			// 只有当页面滚动到顶部时才处理下拉刷新
+			if (window.scrollY <= 0) {
+				touchEndY = e.touches[0].clientY;
+				const distance = touchEndY - touchStartY;
+				
+				// 如果下拉距离足够，显示刷新指示器
+				if (distance > 0 && distance < threshold) {
+					pullToRefresh.style.transform = `translateY(${distance}px)`;
+				}
+			}
+		}, { passive: true });
+		
+		// 处理触摸结束事件
+		document.addEventListener('touchend', function(e) {
+			if (refreshing) return;
+			
+			if (window.scrollY <= 0) {
+				const distance = touchEndY - touchStartY;
+				
+				// 重置下拉指示器位置
+				pullToRefresh.style.transform = '';
+				
+				// 如果下拉距离超过阈值，触发刷新
+				if (distance > threshold) {
+					refreshContent();
+				}
+			}
+		}, { passive: true });
+		
+		// 特别处理iOS的Safari浏览器
+		// Safari有自己的下拉刷新行为，我们需要覆盖它
+		if (/iPhone|iPad|iPod/i.test(navigator.userAgent) && /Safari/i.test(navigator.userAgent)) {
+			document.body.style.overscrollBehaviorY = 'none';
+			
+			// 添加额外的事件监听器来防止Safari的默认行为
+			document.addEventListener('gesturestart', function(e) {
+				e.preventDefault();
+			}, { passive: false });
+			
+			// 处理iOS的滚动反弹效果
+			document.addEventListener('scroll', function() {
+				if (window.scrollY < 0) {
+					document.body.style.transform = `translateY(${Math.abs(window.scrollY)}px)`;
+				} else {
+					document.body.style.transform = '';
+				}
+			}, { passive: true });
 		}
-	});
-	
-	// 定期检查favicon（以防其他脚本或浏览器行为改变它）
-	setInterval(setFavicon, 5000);
+		
+		// 刷新内容的函数
+		function refreshContent() {
+			refreshing = true;
+			pullToRefresh.classList.add('visible');
+			
+			// 重新加载当前页面内容
+			setPath(path, files, q, document.location.pathname, document.location.search);
+			
+			// 模拟加载时间，然后隐藏刷新指示器
+			setTimeout(function() {
+				pullToRefresh.classList.remove('visible');
+				refreshing = false;
+			}, 1500);
+		}
+	}
 }
+
 if (document.readyState === "loading")
 	document.addEventListener("DOMContentLoaded", onLoad);
 else

@@ -36,13 +36,22 @@ app.get('/idx/*', (req, res) => {
     // 读取目录内容
     const files = fs.readdirSync(fullPath);
     
+    // 过滤掉隐藏文件和系统文件
+    const filteredByHidden = files.filter(file => {
+      // 过滤掉 .DS_Store 文件和其他以点开头的隐藏文件
+      return !file.startsWith('.') && 
+             file !== '.DS_Store' && 
+             file !== '..DS_Store' && 
+             file !== 'Thumbs.db';  // Windows系统缩略图文件
+    });
+    
     // 处理搜索查询
     const searchQuery = req.query.q;
-    let filteredFiles = files;
+    let filteredFiles = filteredByHidden;
     
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filteredFiles = files.filter(file => 
+      filteredFiles = filteredByHidden.filter(file => 
         file.toLowerCase().includes(query)
       );
     }
@@ -102,8 +111,16 @@ app.get('/dl/*', (req, res) => {
   }
 });
 
-// 处理根路径请求
-app.get('/', (req, res) => {
+// 处理所有其他GET请求 - 返回index.html以支持客户端路由
+app.get('*', (req, res) => {
+  // 排除API路径和静态资源
+  if (req.path.startsWith('/idx/') || req.path.startsWith('/dl/') || 
+      req.path.endsWith('.js') || req.path.endsWith('.css') || 
+      req.path.endsWith('.png') || req.path.endsWith('.woff')) {
+    return res.status(404).send('Not found');
+  }
+  
+  // 返回index.html
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 

@@ -3,9 +3,12 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name=viewport content="width=device-width, initial-scale=1">
+	<meta name=viewport content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 	<meta name=description content="iKOOLCORE Download Center for Users, including BIOS, Drivers, Firmwares, Guidence, Manual etc.">
 	<meta name=keywords content="iKOOLCORE, R2 Max, R2 POE, R2, R1, R1 Pro, Drivers">
+	<meta name="theme-color" content="#2563eb">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 	<title>iKOOLCORE Download Center</title>
 	
 	<!-- Google Analytics 4 -->
@@ -18,14 +21,21 @@
 	</script>
 	
 	<link rel="shortcut icon" href="/favicon.png">
-	<link rel="stylesheet" type="text/css" href="/style.css?201809141">
+	<link rel="stylesheet" type="text/css" href="/style.css?202503282">
 	<link rel="preload" href="/font.woff?201809121" as="font" type="font/woff" crossorigin>
-	<script src="/script.js?202010021" async></script>
+	<script src="/script.js?202503282" async></script>
 </head>
 <body class=loading>
 	<!-- 添加动态背景容器 -->
 	<div class="tech-background">
 		<div class="tech-grid"></div>
+	</div>
+	<!-- 添加下拉刷新指示器 -->
+	<div id="pull-to-refresh">
+		<div class="spinner">
+			<div class="double-bounce1"></div>
+			<div class="double-bounce2"></div>
+		</div>
 	</div>
 	<header>
 		<ul id=path><li><a href="/">Home</a></li><li></li></ul>
