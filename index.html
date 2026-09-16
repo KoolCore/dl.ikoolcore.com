@@ -1,16 +1,29 @@
 <!doctype html>
-<html lang=en>
+<html lang="en">
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name=viewport content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-	<meta name=description content="iKOOLCORE Download Center for Users, including BIOS, Drivers, Firmwares, Guidence, Manual etc.">
-	<meta name=keywords content="iKOOLCORE, R2 Max, R2 POE, R2, R1, R1 Pro, Drivers">
-	<meta name="theme-color" content="#2563eb">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="Official iKOOLCORE technical resource center for BIOS, firmware, drivers, manuals and deployment documentation.">
+	<meta name="keywords" content="iKOOLCORE, R2 Max, R2 POE, R2, R1, R1 Pro, BIOS, firmware, drivers, manuals">
+	<meta name="theme-color" content="#0d63f3">
+	<meta name="color-scheme" content="light dark">
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-	<title>iKOOLCORE Download Center</title>
-	
+	<title>iKOOLCORE Download Center | Technical Resource Hub</title>
+
+	<script>
+		(function () {
+			try {
+				var savedTheme = localStorage.getItem('ikoolcore-theme');
+				var systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+				document.documentElement.dataset.theme = savedTheme || systemTheme;
+			} catch (error) {
+				document.documentElement.dataset.theme = 'light';
+			}
+		})();
+	</script>
+
 	<!-- Google Analytics 4 -->
 	<script async src="https://www.googletagmanager.com/gtag/js?id=G-1TE4N38KSH"></script>
 	<script>
@@ -19,59 +32,259 @@
 		gtag('js', new Date());
 		gtag('config', 'G-1TE4N38KSH');
 	</script>
-	
+
 	<link rel="shortcut icon" href="/favicon.png">
-	<link rel="stylesheet" type="text/css" href="/style.css?202503282">
 	<link rel="preload" href="/font.woff?201809121" as="font" type="font/woff" crossorigin>
-	<script src="/script.js?202503282" async></script>
+	<link rel="stylesheet" type="text/css" href="/style.css?2026091601">
+	<script src="/script.js?2026091601" defer></script>
 </head>
-<body class=loading>
-	<!-- 添加动态背景容器 -->
-	<div class="tech-background">
+<body class="loading">
+	<a class="skip-link" href="#resource-library">Skip to downloads</a>
+
+	<div class="tech-background" aria-hidden="true">
 		<div class="tech-grid"></div>
+		<div class="tech-aurora tech-aurora--one"></div>
+		<div class="tech-aurora tech-aurora--two"></div>
+		<div class="tech-noise"></div>
 	</div>
-	<!-- 添加下拉刷新指示器 -->
-	<div id="pull-to-refresh">
-		<div class="spinner">
-			<div class="double-bounce1"></div>
-			<div class="double-bounce2"></div>
+
+	<div id="pull-to-refresh" aria-hidden="true">
+		<div class="refresh-ring"></div>
+	</div>
+
+	<header class="site-header">
+		<div class="header-inner">
+			<a class="brand" href="/" aria-label="iKOOLCORE Download Center home">
+				<span class="brand-mark" aria-hidden="true">
+					<svg viewBox="0 0 44 44" role="img">
+						<defs>
+							<linearGradient id="brand-gradient" x1="6" y1="4" x2="38" y2="40" gradientUnits="userSpaceOnUse">
+								<stop stop-color="#0d63f3"/>
+								<stop offset="1" stop-color="#19c2d8"/>
+							</linearGradient>
+						</defs>
+						<path d="M22 3.5 38 12.7v18.6L22 40.5 6 31.3V12.7L22 3.5Z" fill="url(#brand-gradient)"/>
+						<path d="M27.7 15.1a7.7 7.7 0 1 0 0 13.8" fill="none" stroke="white" stroke-width="4.1" stroke-linecap="round"/>
+						<path d="M22 3.5 38 12.7 22 22 6 12.7 22 3.5Z" fill="white" fill-opacity=".12"/>
+					</svg>
+				</span>
+				<span class="brand-copy">
+					<strong>iKOOLCORE</strong>
+					<span>Download Center</span>
+				</span>
+			</a>
+
+			<nav class="header-nav" aria-label="Primary navigation">
+				<span class="header-status" title="Download library available">
+					<span class="status-dot"></span>
+					Library online
+				</span>
+				<a href="https://wiki.ikoolcore.com/" target="_blank" rel="noopener">Wiki</a>
+				<a href="https://www.ikoolcore.com/" target="_blank" rel="noopener">Shop</a>
+				<button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch color theme" aria-pressed="false">
+					<svg class="theme-icon theme-icon--sun" viewBox="0 0 24 24" aria-hidden="true">
+						<path d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.657-5.657 1.414-1.414M4.929 19.071l1.414-1.414m11.314 0 1.414 1.414M4.929 4.929l1.414 1.414M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"/>
+					</svg>
+					<svg class="theme-icon theme-icon--moon" viewBox="0 0 24 24" aria-hidden="true">
+						<path d="M20.5 14.2A8.7 8.7 0 0 1 9.8 3.5 8.8 8.8 0 1 0 20.5 14.2Z"/>
+					</svg>
+				</button>
+			</nav>
 		</div>
-	</div>
-	<header>
-		<ul id=path><li><a href="/">Home</a></li><li></li></ul>
-		<form id=search><input type=text placeholder="Search.." id=q name=q><button type=submit><span>
-			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-			</svg>
-		</span></button></form>
 	</header>
-	<main><ul id=files><li><a href="/" class="u">..</a></li></ul></main>
-	<footer>
-		<div class="footer-buttons">
-			<a href="https://www.ikoolcore.com/" class="shop-button shop" target="_blank">Back to Shop</a>
-			<a href="https://wiki.ikoolcore.com/" class="shop-button wiki" target="_blank">Back to Wiki</a>
+
+	<main class="page-shell">
+		<section class="hero" aria-labelledby="page-title">
+			<div class="hero-copy">
+				<p class="eyebrow"><span class="eyebrow-line"></span>Official technical resource hub</p>
+				<h1 id="page-title">System resources,<br><span>engineered for clarity.</span></h1>
+				<p class="hero-summary">Access BIOS releases, hardware drivers, firmware, manuals and deployment documentation for iKOOLCORE systems from one structured archive.</p>
+				<div class="hero-tags" aria-label="Available resource types">
+					<span>BIOS &amp; firmware</span>
+					<span>Hardware drivers</span>
+					<span>Technical manuals</span>
+				</div>
+			</div>
+
+			<div class="hero-console" aria-label="Download library status">
+				<div class="console-topline">
+					<span>Resource network</span>
+					<span class="console-state"><span class="status-dot"></span>Operational</span>
+				</div>
+				<div class="radar" aria-hidden="true">
+					<div class="radar-ring radar-ring--one"></div>
+					<div class="radar-ring radar-ring--two"></div>
+					<div class="radar-ring radar-ring--three"></div>
+					<div class="radar-sweep"></div>
+					<div class="radar-core">
+						<svg viewBox="0 0 44 44">
+							<path d="M22 3.5 38 12.7v18.6L22 40.5 6 31.3V12.7L22 3.5Z"/>
+							<path d="M27.7 15.1a7.7 7.7 0 1 0 0 13.8"/>
+						</svg>
+					</div>
+				</div>
+				<div class="console-stats">
+					<div>
+						<span>Release channel</span>
+						<strong>Stable</strong>
+					</div>
+					<div>
+						<span>Archive policy</span>
+						<strong>Official</strong>
+					</div>
+					<div>
+						<span>Availability</span>
+						<strong>24 / 7</strong>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="search-section" aria-labelledby="search-title">
+			<div class="section-heading section-heading--search">
+				<div>
+					<p class="section-kicker">Instant retrieval</p>
+					<h2 id="search-title">Find the exact resource</h2>
+				</div>
+				<p>Search by product model, component, version, file type or document name.</p>
+			</div>
+
+			<form id="search" role="search">
+				<label class="sr-only" for="q">Search the resource library</label>
+				<div class="search-field">
+					<svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+						<path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"/>
+					</svg>
+					<input type="search" placeholder="Search BIOS, drivers, manuals, model or version..." id="q" name="q" autocomplete="off" spellcheck="false">
+					<button class="clear-search" id="clear-search" type="button" aria-label="Clear search" hidden>
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+					</button>
+					<kbd aria-hidden="true">/</kbd>
+				</div>
+				<button class="search-submit" type="submit">
+					<span>Search library</span>
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
+				</button>
+			</form>
+			<div class="search-meta">
+				<span class="search-tip"><span class="keyboard-key">Enter</span> to search</span>
+				<span id="search-context">Scope: entire library</span>
+			</div>
+		</section>
+
+		<section class="metrics-grid" aria-label="Library overview">
+			<article class="metric-card">
+				<span class="metric-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15Z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5A2.5 2.5 0 0 1 4 20.5Z"/></svg>
+				</span>
+				<div>
+					<strong id="metric-resource-count">--</strong>
+					<span id="metric-resource-label">Indexed entries</span>
+				</div>
+			</article>
+			<article class="metric-card">
+				<span class="metric-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24"><path d="M12 3v4m0 10v4M3 12h4m10 0h4M5.64 5.64l2.83 2.83m7.06 7.06 2.83 2.83m0-12.72-2.83 2.83m-7.06 7.06-2.83 2.83"/><circle cx="12" cy="12" r="3"/></svg>
+				</span>
+				<div>
+					<strong id="metric-updated">--</strong>
+					<span>Latest release update</span>
+				</div>
+			</article>
+			<article class="metric-card">
+				<span class="metric-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.3c0 4.5 3.1 8.7 7.5 9.7 4.4-1 7.5-5.2 7.5-9.7V6L12 3Z"/><path d="m9 12 2 2 4-4"/></svg>
+				</span>
+				<div>
+					<strong>Official</strong>
+					<span>Publisher source</span>
+				</div>
+			</article>
+		</section>
+
+		<section class="workspace" id="resource-library">
+			<div class="library-panel">
+				<header class="panel-heading">
+					<div>
+						<p class="section-kicker">Resource archive</p>
+						<h2>Browse downloads</h2>
+					</div>
+					<div class="result-state" aria-live="polite">
+						<span class="status-dot"></span>
+						<span id="result-count">Loading library</span>
+					</div>
+				</header>
+
+				<nav class="breadcrumb" aria-label="Breadcrumb">
+					<ul id="path"><li><a href="/">Home</a></li><li></li></ul>
+				</nav>
+
+				<ul id="files" aria-live="polite" aria-busy="true">
+					<li class="initial-loading">
+						<span class="loading-line loading-line--icon"></span>
+						<span class="loading-copy"><span class="loading-line loading-line--title"></span><span class="loading-line loading-line--meta"></span></span>
+					</li>
+				</ul>
+			</div>
+
+			<aside class="sidebar" aria-label="Download support">
+				<article class="support-card support-card--primary">
+					<p class="card-label">Technical support</p>
+					<h3>Need help identifying the right package?</h3>
+					<p>Use the product wiki for setup guidance, compatibility notes and hardware specifications.</p>
+					<div class="support-actions">
+						<a href="https://wiki.ikoolcore.com/" target="_blank" rel="noopener">
+							Open product wiki
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7m-8 0h8v8"/></svg>
+						</a>
+						<a href="https://discord.gg/ddHdeSkE" target="_blank" rel="noopener">Community support</a>
+					</div>
+				</article>
+
+				<article class="support-card">
+					<div class="card-heading">
+						<p class="card-label">Release protocol</p>
+						<span>Before download</span>
+					</div>
+					<ol class="protocol-list">
+						<li>
+							<span>01</span>
+							<p><strong>Confirm your model</strong>Match the product name and hardware revision before downloading.</p>
+						</li>
+						<li>
+							<span>02</span>
+							<p><strong>Read release notes</strong>Check compatibility, version requirements and update sequence.</p>
+						</li>
+						<li>
+							<span>03</span>
+							<p><strong>Prepare for BIOS updates</strong>Keep stable power and avoid interrupting the flash process.</p>
+						</li>
+					</ol>
+				</article>
+			</aside>
+		</section>
+	</main>
+
+	<footer class="site-footer">
+		<div class="footer-inner">
+			<div class="footer-brand">
+				<span class="footer-mark" aria-hidden="true">iK</span>
+				<div>
+					<strong>iKOOLCORE Download Center</strong>
+					<span>Official technical resources</span>
+				</div>
+			</div>
+
+			<nav class="footer-links" aria-label="Footer navigation">
+				<a href="https://www.ikoolcore.com/" target="_blank" rel="noopener">Shop</a>
+				<a href="https://wiki.ikoolcore.com/" target="_blank" rel="noopener">Wiki</a>
+				<a href="https://x.com/iKOOLCORE" target="_blank" rel="noopener">X / Twitter</a>
+				<a href="https://www.facebook.com/iKOOLCOREofficial" target="_blank" rel="noopener">Facebook</a>
+				<a href="https://discord.gg/ddHdeSkE" target="_blank" rel="noopener">Discord</a>
+			</nav>
+
+			<p class="copyright">© <span id="current-year">2026</span> iKOOLCORE TECHNOLOGY (HONGKONG) CO., LIMITED</p>
 		</div>
-		<div class="social-media">
-			<a href="https://x.com/iKOOLCORE" class="social-button twitter" target="_blank">
-				<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-					<path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-				</svg>
-				Follow us on X
-			</a>
-			<a href="https://www.facebook.com/iKOOLCOREofficial" class="social-button facebook" target="_blank">
-				<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-					<path d="M9.198 21.5h4v-8.01h3.604l.396-3.98h-4V7.5a1 1 0 0 1 1-1h3v-4h-3a5 5 0 0 0-5 5v2.01h-2l-.396 3.98h2.396v8.01Z" />
-				</svg>
-				Follow us on Facebook
-			</a>
-			<a href="https://discord.gg/ddHdeSkE" class="social-button discord" target="_blank">
-				<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-					<path d="M20.317 4.492c-1.53-.69-3.17-1.2-4.885-1.49a.075.075 0 0 0-.079.036c-.21.369-.444.85-.608 1.23a18.566 18.566 0 0 0-5.487 0 12.36 12.36 0 0 0-.617-1.23A.077.077 0 0 0 8.562 3c-1.714.29-3.354.8-4.885 1.491a.07.07 0 0 0-.032.027C.533 9.093-.32 13.555.099 17.961a.08.08 0 0 0 .031.055 20.03 20.03 0 0 0 5.993 2.98.078.078 0 0 0 .084-.026c.462-.62.874-1.275 1.226-1.963.021-.04.001-.088-.041-.104a13.229 13.229 0 0 1-1.872-.878.075.075 0 0 1-.008-.125c.126-.093.252-.19.372-.287a.075.075 0 0 1 .078-.01c3.927 1.764 8.18 1.764 12.061 0a.075.075 0 0 1 .079.009c.12.098.245.195.372.288a.075.075 0 0 1-.006.125c-.598.344-1.22.635-1.873.877a.075.075 0 0 0-.041.105c.36.687.772 1.341 1.225 1.962a.077.077 0 0 0 .084.028 19.963 19.963 0 0 0 6.002-2.981.076.076 0 0 0 .032-.054c.5-5.094-.838-9.52-3.549-13.442a.06.06 0 0 0-.031-.028zM8.02 15.278c-1.182 0-2.157-1.069-2.157-2.38 0-1.312.956-2.38 2.157-2.38 1.21 0 2.176 1.077 2.157 2.38 0 1.312-.956 2.38-2.157 2.38zm7.975 0c-1.183 0-2.157-1.069-2.157-2.38 0-1.312.955-2.38 2.157-2.38 1.21 0 2.176 1.077 2.157 2.38 0 1.312-.946 2.38-2.157 2.38z" />
-				</svg>
-				Join our Discord
-			</a>
-		</div>
-		<p class="copyright"> 2025 iKOOLCORE TECHNOLOGY(HONGKONG) CO,. LIMITED</p>
 	</footer>
 </body>
 </html>

@@ -1,295 +1,513 @@
 "use strict";
-const search = RegExp("[?&]q=([^&]+)");
 
-// 设置网站favicon
-function setFavicon() {
-    // 移除所有现有的favicon
-    const existingIcons = document.querySelectorAll('link[rel*="icon"]');
-    for (let i = 0; i < existingIcons.length; i++) {
-        existingIcons[i].parentNode.removeChild(existingIcons[i]);
-    }
-    
-    // 添加我们自己的favicon
-    const link = document.createElement('link');
-    link.rel = 'shortcut icon';
-    link.href = '/favicon.png';
-    link.type = 'image/png';
-    document.head.appendChild(link);
+const SEARCH_PATTERN = /[?&]q=([^&]+)/;
+const DIRECTORY_PRESENTATION = {
+	bios: { description: "Firmware releases, update packages and release notes." },
+	firmware: { description: "Firmware images and release packages for supported systems." },
+	drivers: { description: "Network, storage, graphics and platform drivers." },
+	driver: { description: "Hardware drivers and compatibility packages." },
+	manuals: { description: "User guides, quick-start documents and technical references." },
+	manual: { description: "User guides, quick-start documents and technical references." },
+	documents: { description: "Technical documents, guides and reference material." }
+};
+
+const FILE_PRESENTATION = {
+	pdf: { type: "PDF", description: "PDF documentation and technical reference." },
+	zip: { type: "Archive", description: "Compressed driver or firmware package." },
+	rar: { type: "Archive", description: "Compressed resource package." },
+	"7z": { type: "Archive", description: "Compressed resource package." },
+	bin: { type: "Firmware", description: "Firmware binary image for supported hardware." },
+	exe: { type: "Installer", description: "Windows installation or update utility." },
+	bat: { type: "Script", description: "Windows automation or deployment script." },
+	iso: { type: "Image", description: "Disc image containing system software." },
+	img: { type: "Image", description: "Disk or system image file." },
+	txt: { type: "Text", description: "Plain text release or configuration information." },
+	log: { type: "Log", description: "System log or diagnostic output." },
+	ini: { type: "Config", description: "Configuration file for supported software." },
+	doc: { type: "Document", description: "Editable technical document." },
+	docx: { type: "Document", description: "Editable technical document." },
+	xls: { type: "Spreadsheet", description: "Tabular compatibility or reference data." },
+	xlsx: { type: "Spreadsheet", description: "Tabular compatibility or reference data." },
+	md: { type: "Markdown", description: "Structured technical notes or documentation." }
+};
+
+function safeDecode(value) {
+	try {
+		return decodeURIComponent(value);
+	} catch (error) {
+		return value;
+	}
 }
 
-function setPath(crumbs, files, q, path, query) {
-	if (document.location.pathname != path || document.location.search != query) {
-		history.pushState({}, document.title, path + query);
-		path = document.location.pathname;
-	}
+function normalizePath(pathname) {
+	return (pathname || "/")
+		.split("/")
+		.filter(Boolean)
+		.map(safeDecode);
+}
 
-	document.body.classList.add("loading");
-	window.scrollTo(0, 0);
+function hasChineseCharacters(value) {
+	return /[\u4E00-\u9FFF]/.test(value);
+}
 
-	function hasChineseCharacters(str) {
-        return /[\u4E00-\u9FFF]/.test(str);
-    }
+function processTextWithMixedLanguages(value) {
+	const text = value === document.location.hostname ? "HOME" : value.replace(/_/g, " ");
+	const fragment = document.createDocumentFragment();
 
-	function processTextWithMixedLanguages(text) {
-		// Replace underscores with spaces first
-		text = text === document.location.hostname ? "HOME" : text.replace(/_/g, " ");
-		
-		// If no Chinese characters, return as is with English language tag
-		if (!hasChineseCharacters(text)) {
-			let span = document.createElement("span");
-			span.setAttribute("lang", "en");
-			span.textContent = text;
-			return span;
-		}
-		
-		// If it has Chinese characters, process character by character
-		const fragment = document.createDocumentFragment();
-		let currentType = null;
-		let currentSpan = null;
-		
-		for (let i = 0; i < text.length; i++) {
-			const char = text[i];
-			const isChinese = /[\u4E00-\u9FFF]/.test(char);
-			const type = isChinese ? "zh" : "en";
-			
-			// If type changed or first character, create a new span
-			if (type !== currentType) {
-				currentType = type;
-				currentSpan = document.createElement("span");
-				currentSpan.setAttribute("lang", type);
-				fragment.appendChild(currentSpan);
-			}
-			
-			currentSpan.textContent += char;
-		}
-		
+	if (!hasChineseCharacters(text)) {
+		const span = document.createElement("span");
+		span.lang = "en";
+		span.textContent = text;
+		fragment.appendChild(span);
 		return fragment;
 	}
 
-	function a(sp, href, text, cls, rel) {
-		let r = document.createElement("a");
-		
-		// Process text with mixed languages
-		const textContent = processTextWithMixedLanguages(text);
-		r.appendChild(textContent);
-		
-		r.setAttribute("href", href);
-		if (rel) r.setAttribute("rel", rel);
-		if (cls) r.classList.add(cls);
-		
-		// We still keep this for backward compatibility
-		if (hasChineseCharacters(text)) {
-			r.setAttribute("lang", "zh-CN");
+	let currentLanguage = null;
+	let currentSpan = null;
+
+	for (const character of text) {
+		const language = /[\u4E00-\u9FFF]/.test(character) ? "zh" : "en";
+		if (language !== currentLanguage) {
+			currentLanguage = language;
+			currentSpan = document.createElement("span");
+			currentSpan.lang = language;
+			fragment.appendChild(currentSpan);
 		}
-		
-		if (sp)	r.addEventListener("click", function(e){
-			e.preventDefault();
-			setPath(crumbs, files, q, href, "");
+		currentSpan.textContent += character;
+	}
+
+	return fragment;
+}
+
+function createArrowIcon(kind) {
+	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+	svg.setAttribute("viewBox", "0 0 24 24");
+	svg.setAttribute("aria-hidden", "true");
+	const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+	path.setAttribute("d", kind === "download" ? "M12 3v12m-5-5 5 5 5-5M5 21h14" : "M5 12h14m-5-5 5 5-5 5");
+	svg.appendChild(path);
+	return svg;
+}
+
+function createNavLink(href, text, className) {
+	const link = document.createElement("a");
+	link.href = href;
+	if (className) link.className = className;
+	link.appendChild(processTextWithMixedLanguages(text));
+	if (href !== "/") {
+		link.addEventListener("click", function (event) {
+			event.preventDefault();
+			setPath(document.getElementById("path"), document.getElementById("files"), document.getElementById("q"), href, "");
 		});
-		return r;
 	}
-	function el(e, c) {
-		let r = document.createElement(e);
-		r.appendChild(c);
-		return r;
-	}
+	return link;
+}
 
-	path = path.replace(/\/\/+/g, "/").replace(/(^\/+)|(\/+$)/g, "")
-	const p = (path)?path.split("/"):[];
-	let s = search.exec(query)
-	let f = document.createDocumentFragment();
-	f.appendChild(el("li", a(true, "/", document.location.hostname)));
-	let h = "/"
-	for (let i = 0; i < p.length - (!s); i++) {
-		h += p[i];
-		f.appendChild(el("li", a(true, h, decodeURIComponent(p[i]))));
-		h += "/";
-	}
+function formatFileSize(bytes) {
+	if (!Number.isFinite(bytes) || bytes < 0) return "";
+	if (bytes === 0) return "0 B";
+	const units = ["B", "KB", "MB", "GB", "TB"];
+	const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+	const value = bytes / Math.pow(1024, index);
+	const decimals = index === 0 || value >= 10 ? 0 : 1;
+	return value.toFixed(decimals) + " " + units[index];
+}
 
-	if (s) {
-		s = decodeURIComponent(s[1]);
-		q.value = s;
-		f.appendChild(el("li", el("span", document.createTextNode(s))));
+function formatDate(value, shortFormat) {
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return "";
+	return new Intl.DateTimeFormat("en", shortFormat ? {
+		year: "numeric",
+		month: "short",
+		day: "numeric"
+	} : {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+		hour: "2-digit",
+		minute: "2-digit"
+	}).format(date);
+}
+
+function getFileExtension(name) {
+	const parts = name.split(".");
+	return parts.length > 1 ? parts.pop().toLowerCase() : "";
+}
+
+function getDirectoryDescription(name) {
+	const key = name.toLowerCase();
+	for (const candidate in DIRECTORY_PRESENTATION) {
+		if (key.includes(candidate)) return DIRECTORY_PRESENTATION[candidate].description;
+	}
+	return "Browse the files and subdirectories in this resource group.";
+}
+
+function getDirectoryClass(name) {
+	const key = name.toLowerCase();
+	if (key.includes("bios") || key.includes("firmware")) return "dir-bios";
+	if (key.includes("driver")) return "dir-drivers";
+	if (key.includes("manual") || key.includes("guide")) return "dir-manuals";
+	return "";
+}
+
+function createResourceLink(item, href, rowIndex) {
+	const isDirectory = item.type === "directory";
+	const extension = isDirectory ? "" : getFileExtension(item.name);
+	const presentation = FILE_PRESENTATION[extension] || {
+		type: extension ? extension.toUpperCase() : "File",
+		description: "Downloadable technical resource."
+	};
+	const dateLabel = formatDate(item.lastModified, true);
+	const sizeLabel = formatFileSize(item.size);
+
+	const link = document.createElement("a");
+	link.href = href;
+	link.style.setProperty("--row-index", String(rowIndex));
+	link.className = isDirectory ? "d" : "f";
+	if (isDirectory) {
+		const directoryClass = getDirectoryClass(item.name);
+		if (directoryClass) directoryClass.split(" ").forEach((value) => link.classList.add(value));
 	} else {
-		q.value = "";
-		f.appendChild(el("li", document.createTextNode(decodeURIComponent(p[p.length-1]||""))));
+		link.rel = "nofollow";
 	}
-	crumbs.innerHTML = "";
-	crumbs.appendChild(f);
 
-	const req = new XMLHttpRequest();
-	req.onreadystatechange = function() {
-		if (this.readyState != 4) return;
+	const copy = document.createElement("span");
+	copy.className = "resource-copy";
+	const title = document.createElement("strong");
+	title.appendChild(processTextWithMixedLanguages(item.name));
+	const description = document.createElement("span");
+	description.textContent = isDirectory ? getDirectoryDescription(item.name) : presentation.description;
+	copy.append(title, description);
+
+	const type = document.createElement("span");
+	type.className = "resource-type";
+	type.textContent = isDirectory ? "Folder" : presentation.type;
+
+	const meta = document.createElement("span");
+	meta.className = "resource-meta";
+	meta.textContent = isDirectory
+		? (dateLabel ? "Updated " + dateLabel : "Resource folder")
+		: [sizeLabel, dateLabel ? "Updated " + dateLabel : ""].filter(Boolean).join(" · ");
+
+	const action = document.createElement("span");
+	action.className = "resource-action";
+	action.append(document.createTextNode(isDirectory ? "Open" : "Download"), createArrowIcon(isDirectory ? "open" : "download"));
+
+	link.append(copy, type, meta, action);
+	link.setAttribute("aria-label", item.name + ", " + (isDirectory ? "open folder" : "download file"));
+
+	if (isDirectory) {
+		link.addEventListener("click", function (event) {
+			event.preventDefault();
+			setPath(document.getElementById("path"), document.getElementById("files"), document.getElementById("q"), href, "");
+		});
+	}
+
+	return link;
+}
+
+function updateOverview(items, segments, searchTerm) {
+	const count = document.getElementById("metric-resource-count");
+	const countLabel = document.getElementById("metric-resource-label");
+	const updated = document.getElementById("metric-updated");
+	const resultCount = document.getElementById("result-count");
+	const searchContext = document.getElementById("search-context");
+
+	if (count) count.textContent = String(items.length).padStart(2, "0");
+	if (countLabel) {
+		countLabel.textContent = searchTerm
+			? "Matching resources"
+			: segments.length
+				? "Entries in this folder"
+				: "Root resource groups";
+	}
+	if (resultCount) {
+		resultCount.textContent = items.length + (items.length === 1 ? " resource" : " resources");
+	}
+	if (searchContext) {
+		searchContext.textContent = "Scope: " + (segments.length ? segments.join(" / ") : "entire library");
+	}
+
+	if (updated) {
+		const latestTimestamp = items.reduce((latest, item) => {
+			const timestamp = new Date(item.lastModified).getTime();
+			return Number.isFinite(timestamp) && timestamp > latest ? timestamp : latest;
+		}, 0);
+		updated.textContent = latestTimestamp ? formatDate(latestTimestamp, true) : "--";
+	}
+}
+
+function renderMessage(files, message, className) {
+	const item = document.createElement("li");
+	item.className = className;
+	item.textContent = message;
+	files.replaceChildren(item);
+}
+
+function updateSearchClearButton(input, button) {
+	if (button) button.hidden = !input.value.trim();
+}
+
+function setPath(crumbs, files, q, path, query) {
+	const segments = normalizePath(path);
+	const normalizedPath = segments.length ? "/" + segments.map(encodeURIComponent).join("/") : "/";
+	const nextQuery = query || "";
+	const nextUrl = normalizedPath + nextQuery;
+
+	if (document.location.pathname + document.location.search !== nextUrl) {
+		history.pushState({}, document.title, nextUrl);
+	}
+
+	document.body.classList.add("loading");
+	files.setAttribute("aria-busy", "true");
+	const resultCount = document.getElementById("result-count");
+	if (resultCount) resultCount.textContent = "Indexing resources";
+	window.scrollTo({ top: 0, behavior: "smooth" });
+
+	const queryParams = new URLSearchParams(nextQuery);
+	const searchTerm = queryParams.get("q") || "";
+
+	crumbs.replaceChildren();
+	const crumbFragment = document.createDocumentFragment();
+	const homeItem = document.createElement("li");
+	homeItem.appendChild(createNavLink("/", document.location.hostname, ""));
+	crumbFragment.appendChild(homeItem);
+
+	if (!segments.length) {
+		const item = document.createElement("li");
+		const current = document.createElement("span");
+		current.textContent = searchTerm ? "Search: " + searchTerm : "All resources";
+		item.appendChild(current);
+		crumbFragment.appendChild(item);
+	} else {
+		segments.forEach((segment, index) => {
+			const item = document.createElement("li");
+			const isLast = index === segments.length - 1 && !searchTerm;
+			if (isLast) {
+				const current = document.createElement("span");
+				current.appendChild(processTextWithMixedLanguages(segment));
+				item.appendChild(current);
+			} else {
+				const href = "/" + segments.slice(0, index + 1).map(encodeURIComponent).join("/");
+				item.appendChild(createNavLink(href, segment, ""));
+			}
+			crumbFragment.appendChild(item);
+		});
+
+		if (searchTerm) {
+			const item = document.createElement("li");
+			const current = document.createElement("span");
+			current.textContent = "Search: " + searchTerm;
+			item.appendChild(current);
+			crumbFragment.appendChild(item);
+		}
+	}
+	crumbs.appendChild(crumbFragment);
+	q.value = searchTerm;
+	updateSearchClearButton(q, document.getElementById("clear-search"));
+
+	const request = new XMLHttpRequest();
+	request.onreadystatechange = function () {
+		if (this.readyState !== 4) return;
+
 		document.body.classList.remove("loading");
+		files.setAttribute("aria-busy", "false");
 
-		if (this.status != 200) {
-			files.innerHTML="<li class=error>"+((this.status == 404)?"Not found":"Load failed")+"</li>";
+		if (this.status !== 200) {
+			renderMessage(files, this.status === 404 ? "This resource location could not be found." : "The library could not be loaded. Please try again.", "error");
+			if (resultCount) resultCount.textContent = "Unavailable";
 			return;
 		}
 
-		let f = document.createDocumentFragment();
-		if (p[0] && !s) {
-			const backLink = a(true, "/"+p.slice(0,-1).join("/"), "Back", "u");
-			f.insertBefore(el("li", backLink), f.firstChild);
+		let items;
+		try {
+			items = JSON.parse(this.responseText || "[]");
+		} catch (error) {
+			renderMessage(files, "The library returned an invalid response.", "error");
+			if (resultCount) resultCount.textContent = "Unavailable";
+			return;
 		}
 
-		const json = JSON.parse(this.responseText || "[]");
-		for (let i = 0; i < json.length; i++) {
-			const n = json[i].name
-			const p = path+encodeURIComponent(json[i].name);
-			if ((json[i].type||"")[0] == "f")
-				f.appendChild(el("li", a(false, "/dl/"+p, n, "f", "nofollow")));
-			else
-				f.appendChild(el("li", a(true, "/"+p.replace(/%2F/gi, "/"), n, "d", "")));
+		const fragment = document.createDocumentFragment();
+		let rowIndex = 0;
+
+		if (segments.length && !searchTerm) {
+			const parentSegments = segments.slice(0, -1);
+			const parentHref = parentSegments.length ? "/" + parentSegments.map(encodeURIComponent).join("/") : "/";
+			const backLink = document.createElement("a");
+			backLink.href = parentHref;
+			backLink.className = "u";
+			const backCopy = document.createElement("span");
+			backCopy.className = "resource-copy";
+			const backTitle = document.createElement("strong");
+			backTitle.textContent = "Back to parent directory";
+			backCopy.appendChild(backTitle);
+			const backAction = document.createElement("span");
+			backAction.className = "resource-action";
+			backAction.append(document.createTextNode("Back"), createArrowIcon("open"));
+			backLink.append(backCopy, backAction);
+			backLink.addEventListener("click", function (event) {
+				event.preventDefault();
+				setPath(crumbs, files, q, parentHref, "");
+			});
+			const backItem = document.createElement("li");
+			backItem.style.setProperty("--row-index", String(rowIndex++));
+			backItem.appendChild(backLink);
+			fragment.appendChild(backItem);
 		}
 
-		if (f.childNodes.length) {
-			files.innerHTML = "";
-			files.appendChild(f);
+		items.forEach((item) => {
+			const itemSegments = segments.concat(item.name);
+			const encodedPath = itemSegments.map(encodeURIComponent).join("/");
+			const href = item.type === "directory" ? "/" + encodedPath : "/dl/" + encodedPath;
+			const listItem = document.createElement("li");
+			listItem.style.setProperty("--row-index", String(rowIndex++));
+			listItem.appendChild(createResourceLink(item, href, rowIndex));
+			fragment.appendChild(listItem);
+		});
+
+		if (fragment.childNodes.length) {
+			files.replaceChildren(fragment);
 		} else {
-			files.innerHTML="<li class=error>No files found</li>";
+			renderMessage(files, searchTerm ? "No resources match this search." : "No files are available in this location.", "no-results");
 		}
+
+		updateOverview(items, segments, searchTerm);
 	};
 
-	if (path) path += "/"
-	req.open("GET", "/idx/" + path + query, true);
-	req.send();
+	const apiPath = "/idx/" + segments.map(encodeURIComponent).join("/") + (segments.length ? "/" : "");
+	request.open("GET", apiPath + nextQuery, true);
+	request.send();
 }
+
+function setFavicon() {
+	if (document.querySelector('link[rel="shortcut icon"][href="/favicon.png"]')) return;
+	const existingIcons = document.querySelectorAll('link[rel*="icon"]');
+	existingIcons.forEach((icon) => icon.remove());
+	const link = document.createElement("link");
+	link.rel = "shortcut icon";
+	link.href = "/favicon.png";
+	link.type = "image/png";
+	document.head.appendChild(link);
+}
+
+function initThemeToggle() {
+	const toggle = document.getElementById("theme-toggle");
+	if (!toggle) return;
+
+	const syncThemeState = () => {
+		const isDark = document.documentElement.dataset.theme === "dark";
+		toggle.setAttribute("aria-pressed", String(isDark));
+		toggle.setAttribute("aria-label", isDark ? "Switch to light theme" : "Switch to dark theme");
+	};
+
+	syncThemeState();
+	toggle.addEventListener("click", function () {
+		const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+		document.documentElement.dataset.theme = nextTheme;
+		try {
+			localStorage.setItem("ikoolcore-theme", nextTheme);
+		} catch (error) {
+			// Theme persistence is optional.
+		}
+		syncThemeState();
+	});
+}
+
+function initPullToRefresh(refresh) {
+	const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+	if (!isMobile) return;
+
+	let startY = 0;
+	let pullDistance = 0;
+	let refreshing = false;
+	const threshold = 78;
+
+	document.addEventListener("touchstart", function (event) {
+		if (window.scrollY <= 0 && !refreshing) startY = event.touches[0].clientY;
+	}, { passive: true });
+
+	document.addEventListener("touchmove", function (event) {
+		if (refreshing || window.scrollY > 0) return;
+		pullDistance = Math.max(0, event.touches[0].clientY - startY);
+		if (pullDistance > 18) refresh.classList.toggle("visible", pullDistance >= threshold);
+	}, { passive: true });
+
+	document.addEventListener("touchend", function () {
+		if (refreshing) return;
+		const shouldRefresh = pullDistance >= threshold;
+		pullDistance = 0;
+		if (!shouldRefresh) {
+			refresh.classList.remove("visible");
+			return;
+		}
+
+		refreshing = true;
+		refresh.classList.add("visible");
+		setPath(document.getElementById("path"), document.getElementById("files"), document.getElementById("q"), document.location.pathname, document.location.search);
+		window.setTimeout(function () {
+			refresh.classList.remove("visible");
+			refreshing = false;
+		}, 900);
+	}, { passive: true });
+}
+
 function onLoad() {
-	const path   = document.getElementById("path");
-	const files  = document.getElementById("files");
+	const path = document.getElementById("path");
+	const files = document.getElementById("files");
 	const search = document.getElementById("search");
-	const q      = document.getElementById("q");
-	const pullToRefresh = document.getElementById("pull-to-refresh");
-	
-	// 初始设置favicon
+	const q = document.getElementById("q");
+	const clearSearch = document.getElementById("clear-search");
+	const refresh = document.getElementById("pull-to-refresh");
+	const currentYear = document.getElementById("current-year");
+
 	setFavicon();
-	
-	// 初始化下拉刷新功能
-	initPullToRefresh();
-	
+	initThemeToggle();
+	initPullToRefresh(refresh);
 	setPath(path, files, q, document.location.pathname, document.location.search);
 
-	window.addEventListener("popstate", function(e) {
+	if (currentYear) currentYear.textContent = String(new Date().getFullYear());
+
+	window.addEventListener("popstate", function () {
 		setPath(path, files, q, document.location.pathname, document.location.search);
-		// 页面历史变化时重新设置favicon
-		setFavicon();
 	});
 
-	search.addEventListener("submit", function(e) {
-		e.preventDefault();
-		const s = q.value ? "?r=1&q=" + encodeURIComponent(q.value) : "";
-		setPath(path, files, q, document.location.pathname, s);
+	search.addEventListener("submit", function (event) {
+		event.preventDefault();
+		const value = q.value.trim();
+		const query = value ? "?r=1&q=" + encodeURIComponent(value) : "";
+		setPath(path, files, q, document.location.pathname, query);
 	});
-	
-	// 监听所有链接点击，特别是PDF链接
-	document.addEventListener('click', function(e) {
-		// 找到最近的a标签
-		const link = e.target.closest('a');
-		if (link) {
-			// 对于所有链接，特别是PDF链接，确保favicon保持不变
-			setTimeout(setFavicon, 100);  // 短延迟确保在页面变化后执行
-			
-			// 对于PDF链接，设置定期检查以确保favicon不变
-			if (link.href && link.href.toLowerCase().endsWith('.pdf')) {
-				// 设置一个间隔，持续确保favicon正确
-				const faviconInterval = setInterval(setFavicon, 500);
-				
-				// 30秒后停止检查
-				setTimeout(function() {
-					clearInterval(faviconInterval);
-				}, 30000);
-			}
+
+	q.addEventListener("input", function () {
+		updateSearchClearButton(q, clearSearch);
+	});
+
+	clearSearch.addEventListener("click", function () {
+		q.value = "";
+		updateSearchClearButton(q, clearSearch);
+		if (new URLSearchParams(document.location.search).has("q")) {
+			setPath(path, files, q, document.location.pathname, "");
+		}
+		q.focus();
+	});
+
+	document.addEventListener("keydown", function (event) {
+		const target = event.target;
+		const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable;
+		if (event.key === "/" && !isTyping) {
+			event.preventDefault();
+			q.focus();
+		}
+		if (event.key === "Escape" && target === q && q.value) {
+			q.value = "";
+			updateSearchClearButton(q, clearSearch);
 		}
 	});
-	
-	// 初始化下拉刷新功能
-	function initPullToRefresh() {
-		// 检测是否为移动设备
-		const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-		if (!isMobile) return;
-		
-		let touchStartY = 0;
-		let touchEndY = 0;
-		const threshold = 80; // 触发刷新的阈值
-		let refreshing = false;
-		
-		// 处理触摸开始事件
-		document.addEventListener('touchstart', function(e) {
-			touchStartY = e.touches[0].clientY;
-		}, { passive: true });
-		
-		// 处理触摸移动事件
-		document.addEventListener('touchmove', function(e) {
-			if (refreshing) return;
-			
-			// 只有当页面滚动到顶部时才处理下拉刷新
-			if (window.scrollY <= 0) {
-				touchEndY = e.touches[0].clientY;
-				const distance = touchEndY - touchStartY;
-				
-				// 如果下拉距离足够，显示刷新指示器
-				if (distance > 0 && distance < threshold) {
-					pullToRefresh.style.transform = `translateY(${distance}px)`;
-				}
-			}
-		}, { passive: true });
-		
-		// 处理触摸结束事件
-		document.addEventListener('touchend', function(e) {
-			if (refreshing) return;
-			
-			if (window.scrollY <= 0) {
-				const distance = touchEndY - touchStartY;
-				
-				// 重置下拉指示器位置
-				pullToRefresh.style.transform = '';
-				
-				// 如果下拉距离超过阈值，触发刷新
-				if (distance > threshold) {
-					refreshContent();
-				}
-			}
-		}, { passive: true });
-		
-		// 特别处理iOS的Safari浏览器
-		// Safari有自己的下拉刷新行为，我们需要覆盖它
-		if (/iPhone|iPad|iPod/i.test(navigator.userAgent) && /Safari/i.test(navigator.userAgent)) {
-			document.body.style.overscrollBehaviorY = 'none';
-			
-			// 添加额外的事件监听器来防止Safari的默认行为
-			document.addEventListener('gesturestart', function(e) {
-				e.preventDefault();
-			}, { passive: false });
-			
-			// 处理iOS的滚动反弹效果
-			document.addEventListener('scroll', function() {
-				if (window.scrollY < 0) {
-					document.body.style.transform = `translateY(${Math.abs(window.scrollY)}px)`;
-				} else {
-					document.body.style.transform = '';
-				}
-			}, { passive: true });
-		}
-		
-		// 刷新内容的函数
-		function refreshContent() {
-			refreshing = true;
-			pullToRefresh.classList.add('visible');
-			
-			// 重新加载当前页面内容
-			setPath(path, files, q, document.location.pathname, document.location.search);
-			
-			// 模拟加载时间，然后隐藏刷新指示器
-			setTimeout(function() {
-				pullToRefresh.classList.remove('visible');
-				refreshing = false;
-			}, 1500);
-		}
-	}
 }
 
-if (document.readyState === "loading")
+if (document.readyState === "loading") {
 	document.addEventListener("DOMContentLoaded", onLoad);
-else
+} else {
 	onLoad();
+}
